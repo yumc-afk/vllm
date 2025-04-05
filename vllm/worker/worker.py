@@ -475,6 +475,14 @@ class Worker(LocalOrDistributedWorkerBase):
 
     def list_prompt_adapters(self) -> Set[int]:
         return self.model_runner.list_prompt_adapters()
+        
+    def update_model_weights(self, model_weights_path: str) -> None:
+        """Update model weights without restarting the engine.
+        
+        Args:
+            model_weights_path: Path to the new model weights.
+        """
+        return self.model_runner.update_model_weights(model_weights_path)
 
     @property
     def max_model_len(self) -> int:

@@ -1166,6 +1166,35 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
 
     def get_model(self) -> nn.Module:
         return self.model
+        
+    def update_model_weights(self, model_weights_path: str) -> None:
+        """Update model weights without restarting the engine.
+        
+        Args:
+            model_weights_path: Path to the new model weights.
+        """
+        logger.info("Updating model weights from %s...", model_weights_path)
+        
+        time_before_update = time.perf_counter()
+        
+        temp_config = copy.deepcopy(self.vllm_config)
+        temp_config.model_config.model = model_weights_path
+        
+        from vllm.model_executor.model_loader import get_model_loader
+        loader = get_model_loader(temp_config.load_config)
+        
+        with torch.no_grad():
+            new_state_dict = loader.load_state_dict(vllm_config=temp_config)
+            
+            for name, param in self.model.named_parameters():
+                if name in new_state_dict:
+                    param.copy_(new_state_dict[name])
+        
+        torch.cuda.empty_cache()
+        
+        time_after_update = time.perf_counter()
+        logger.info("Model weight update took %.6f seconds",
+                    time_after_update - time_before_update)
 
     def save_sharded_state(
         self,

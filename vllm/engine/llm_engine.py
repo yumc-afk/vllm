@@ -1926,6 +1926,18 @@ class LLMEngine:
 
     def list_prompt_adapters(self) -> List[int]:
         return self.model_executor.list_prompt_adapters()
+        
+    def update_model_weights(self, model_weights_path: str) -> None:
+        """Update model weights without restarting the engine.
+        
+        This method allows dynamically updating model weights during inference,
+        enabling integration with training pipelines like Megatron for PPO.
+        
+        Args:
+            model_weights_path: Path to the new model weights.
+        """
+        logger.info("LLMEngine: Updating model weights from %s", model_weights_path)
+        self.model_executor.update_model_weights(model_weights_path)
 
     def start_profile(self) -> None:
         self.model_executor.start_profile()

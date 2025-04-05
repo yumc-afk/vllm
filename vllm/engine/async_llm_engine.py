@@ -1233,6 +1233,22 @@ class AsyncLLMEngine(EngineClient):
 
     async def add_lora(self, lora_request: LoRARequest) -> None:
         self.engine.add_lora(lora_request)
+        
+    async def update_model_weights(self, model_weights_path: str) -> None:
+        """Update model weights without restarting the engine.
+        
+        This method allows dynamically updating model weights during inference,
+        enabling integration with training pipelines like Megatron for PPO.
+        
+        Args:
+            model_weights_path: Path to the new model weights.
+        """
+        if self.is_stopped:
+            raise AsyncEngineDeadError("Background loop is stopped.")
+            
+        await self.engine.check_health_async()
+        
+        await make_async(self.engine.update_model_weights)(model_weights_path)
 
 
 # TODO(v1): Remove this class proxy when V1 goes default.

@@ -191,6 +191,26 @@ class ExecutorBase(ABC):
             assert (s == sets[0]
                     ), "All workers should have the same prompt adapters."
         return sets[0]
+        
+    def update_model_weights(self, model_weights_path: str) -> None:
+        """Update model weights across all workers.
+        
+        Args:
+            model_weights_path: Path to the new model weights.
+        """
+        logger.info("Updating model weights from %s across all workers...", 
+                   model_weights_path)
+        time_before_update = time.perf_counter()
+        
+        self._accepting_requests = False
+        
+        self.collective_rpc("update_model_weights", args=(model_weights_path,))
+        
+        self._accepting_requests = True
+        
+        time_after_update = time.perf_counter()
+        logger.info("Model weight update across all workers took %.6f seconds",
+                   time_after_update - time_before_update)
 
     def start_profile(self) -> None:
         self.collective_rpc("start_profile")
