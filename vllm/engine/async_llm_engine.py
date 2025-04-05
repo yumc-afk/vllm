@@ -1249,6 +1249,22 @@ class AsyncLLMEngine(EngineClient):
         await self.engine.check_health_async()
         
         await make_async(self.engine.update_model_weights)(model_weights_path)
+        
+    async def update_model_weights_from_state_dict(self, state_dict: Dict[str, torch.Tensor]) -> None:
+        """Update model weights directly from a state dict without restarting the engine.
+        
+        This method allows for more efficient weight updates when the weights are already
+        available in memory, such as during training loops.
+        
+        Args:
+            state_dict: Dictionary mapping parameter names to tensor values.
+        """
+        if self.is_stopped:
+            raise AsyncEngineDeadError("Background loop is stopped.")
+            
+        await self.engine.check_health_async()
+        
+        await make_async(self.engine.update_model_weights_from_state_dict)(state_dict)
 
 
 # TODO(v1): Remove this class proxy when V1 goes default.

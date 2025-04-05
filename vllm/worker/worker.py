@@ -483,6 +483,17 @@ class Worker(LocalOrDistributedWorkerBase):
             model_weights_path: Path to the new model weights.
         """
         return self.model_runner.update_model_weights(model_weights_path)
+        
+    def update_model_weights_from_state_dict(self, state_dict: Dict[str, torch.Tensor]) -> None:
+        """Update model weights directly from a state dict without restarting the engine.
+        
+        This method allows for more efficient weight updates when the weights are already
+        available in memory, such as during training loops.
+        
+        Args:
+            state_dict: Dictionary mapping parameter names to tensor values.
+        """
+        return self.model_runner.update_model_weights_from_state_dict(state_dict)
 
     @property
     def max_model_len(self) -> int:

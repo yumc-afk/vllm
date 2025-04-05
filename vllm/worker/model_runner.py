@@ -1195,6 +1195,30 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
         time_after_update = time.perf_counter()
         logger.info("Model weight update took %.6f seconds",
                     time_after_update - time_before_update)
+                    
+    def update_model_weights_from_state_dict(self, state_dict: Dict[str, torch.Tensor]) -> None:
+        """Update model weights directly from a state dict without restarting the engine.
+        
+        This method allows for more efficient weight updates when the weights are already
+        available in memory, such as during training loops.
+        
+        Args:
+            state_dict: Dictionary mapping parameter names to tensor values.
+        """
+        logger.info("Updating model weights from provided state dict...")
+        
+        time_before_update = time.perf_counter()
+        
+        with torch.no_grad():
+            for name, param in self.model.named_parameters():
+                if name in state_dict:
+                    param.copy_(state_dict[name])
+        
+        torch.cuda.empty_cache()
+        
+        time_after_update = time.perf_counter()
+        logger.info("Model weight update from state dict took %.6f seconds",
+                    time_after_update - time_before_update)
 
     def save_sharded_state(
         self,

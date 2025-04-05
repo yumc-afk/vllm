@@ -1938,6 +1938,18 @@ class LLMEngine:
         """
         logger.info("LLMEngine: Updating model weights from %s", model_weights_path)
         self.model_executor.update_model_weights(model_weights_path)
+        
+    def update_model_weights_from_state_dict(self, state_dict: Dict[str, torch.Tensor]) -> None:
+        """Update model weights directly from a state dict without restarting the engine.
+        
+        This method allows for more efficient weight updates when the weights are already
+        available in memory, such as during training loops.
+        
+        Args:
+            state_dict: Dictionary mapping parameter names to tensor values.
+        """
+        logger.info("LLMEngine: Updating model weights from provided state dict")
+        self.model_executor.update_model_weights_from_state_dict(state_dict)
 
     def start_profile(self) -> None:
         self.model_executor.start_profile()

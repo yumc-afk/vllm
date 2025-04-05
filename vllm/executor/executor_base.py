@@ -6,6 +6,8 @@ from abc import ABC, abstractmethod
 from typing import (Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple,
                     Union)
 
+import torch
+
 import torch.nn as nn
 from typing_extensions import TypeVar
 
@@ -210,6 +212,28 @@ class ExecutorBase(ABC):
         
         time_after_update = time.perf_counter()
         logger.info("Model weight update across all workers took %.6f seconds",
+                   time_after_update - time_before_update)
+                   
+    def update_model_weights_from_state_dict(self, state_dict: Dict[str, torch.Tensor]) -> None:
+        """Update model weights directly from a state dict across all workers.
+        
+        This method allows for more efficient weight updates when the weights are already
+        available in memory, such as during training loops.
+        
+        Args:
+            state_dict: Dictionary mapping parameter names to tensor values.
+        """
+        logger.info("Updating model weights from provided state dict across all workers...")
+        time_before_update = time.perf_counter()
+        
+        self._accepting_requests = False
+        
+        self.collective_rpc("update_model_weights_from_state_dict", args=(state_dict,))
+        
+        self._accepting_requests = True
+        
+        time_after_update = time.perf_counter()
+        logger.info("Model weight update from state dict across all workers took %.6f seconds",
                    time_after_update - time_before_update)
 
     def start_profile(self) -> None:
