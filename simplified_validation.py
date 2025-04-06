@@ -50,25 +50,28 @@ def validate_v1_interface_only():
     print("Checking for v0 interface modifications...")
     
     import subprocess
+    import re
+    
     result = subprocess.run(
-        ["git", "diff", "--merge-base", "main"],
+        ["git", "diff", "--merge-base", "main", "--name-only"],
         capture_output=True,
         text=True,
         cwd=os.path.dirname(os.path.abspath(__file__))
     )
     
-    diff_output = result.stdout
+    modified_files = result.stdout.splitlines()
     
-    v0_files = [
-        "vllm/engine/v0/",
-        "vllm/v0/"
+    v0_patterns = [
+        r"^vllm/engine/v0/.*",
+        r"^vllm/v0/.*"
     ]
     
     v0_modified = False
-    for v0_file in v0_files:
-        if v0_file in diff_output:
-            v0_modified = True
-            print(f"❌ V0 interface modified: {v0_file}")
+    for file in modified_files:
+        for pattern in v0_patterns:
+            if re.match(pattern, file):
+                v0_modified = True
+                print(f"❌ V0 interface modified: {file}")
     
     if not v0_modified:
         print("✓ V0 interface not modified")
