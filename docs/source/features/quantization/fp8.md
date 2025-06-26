@@ -136,3 +136,6 @@ print(result[0].outputs[0].text)
 :::{warning}
 Currently, we load the model at original precision before quantizing down to 8-bits, so you need enough memory to load the whole model.
 :::
+## DeepSeek-V3 Weight Scale Naming
+
+DeepSeek-V3 checkpoints store the scaling factors for FP8 weights in inverted form (1/scale) and expect these values under the parameter name `weight_scale_inv`. In vLLM, the loader preserves this naming so that the inverse scale can be passed directly to the CUDA kernels. Other models may store the regular scale ("weight_scale") instead. When converting checkpoints or authoring custom models, ensure the correct name is used for the chosen format.
