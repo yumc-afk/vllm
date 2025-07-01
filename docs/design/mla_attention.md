@@ -62,6 +62,20 @@ spda_o = scaled_dot_product_attention(
 摘自 `vllm/attention/backends/mla/common.py`【F:vllm/attention/backends/mla/common.py†L98-L118】。
 由于 `Lkv` 大于 `P`，此路径在更大的头维上执行 softmax 和乘法，单次计算量更高，但省去了对历史 KV 的持续上投影，也减少了显存占用和 GPU 间通信，在长序列解码或分布式场景中更具优势。
 
+## 历史 KV 持续上投影的复杂度分析
+
+如果在解码阶段也像 prefill 一样，持续将缓存中的 `kv_c` 上投影到每个头，
+每一步都需要执行下面的矩阵乘法：
+
+```python
+k_nope = (kv_c @ W_UK.view(Lkv, N * P)).view(Skv, N, P)
+v      = (kv_c @ W_UV.view(Lkv, N * V)).view(Skv, N, V)
+```
+
+这些操作在 `vllm/attention/backends/mla/common.py`【F:vllm/attention/backends/mla/common.py†L68-L76】中出现。
+其计算复杂度约为 `O(Skv × Lkv × N × P)` 和 `O(Skv × Lkv × N × V)`，合计 `O(Skv × Lkv × N × (P + V))`，并会在每个解码步重复。
+当 `Skv` 较大时，这个成本远高于在 `Lkv + R` 维度直接做注意力的方案，因此 MLA 在 decode 阶段选择保留 latent KV，避免持续上投影。
+
 ## TP/SP 环境下的行为
 
 - MLA 解码时等同于 MQA，只需要一个 KV 头。`get_num_kv_heads` 会在使用 MLA 时忽略 tensor parallel 的头复制，降低通信量。
