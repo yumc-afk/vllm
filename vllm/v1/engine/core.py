@@ -6,6 +6,7 @@ import signal
 import sys
 import threading
 import time
+import uuid
 from collections import deque
 from collections.abc import Generator
 from concurrent.futures import Future
@@ -359,6 +360,33 @@ class EngineCore:
 
     def reset_prefix_cache(self):
         self.scheduler.reset_prefix_cache()
+
+    def rlhfuse_kv_migration_prepare_export(
+        self,
+        request_id: str,
+        snapshot_id: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Prepare exporting a request-level KV snapshot.
+
+        Callers should typically:
+        1) call this method (UTILITY) to allocate a snapshot_id and arm export,
+        2) abort the request to trigger connector.request_finished(),
+        3) resume on another instance with returned kv_transfer_params.
+        """
+        if snapshot_id is None:
+            snapshot_id = str(uuid.uuid4())
+
+        connector = None
+        if hasattr(self.scheduler, "get_kv_connector"):
+            connector = self.scheduler.get_kv_connector()
+
+        if connector is None or not hasattr(connector, "schedule_export"):
+            raise ValueError(
+                "KV migration export requires a KVConnector with "
+                "`schedule_export()` (e.g. MooncakeMigrationConnector).")
+
+        connector.schedule_export(request_id, snapshot_id)  # type: ignore[attr-defined]
+        return {"request_id": request_id, "snapshot_id": snapshot_id}
 
     def sleep(self, level: int = 1):
         self.model_executor.sleep(level)

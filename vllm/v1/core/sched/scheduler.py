@@ -1142,6 +1142,20 @@ class Scheduler(SchedulerInterface):
         for req_id in (model_runner_output.finished_recving or ()):
             logger.debug("Finished recving KV transfer for request %s", req_id)
             self.finished_recving_kv_req_ids.add(req_id)
+            if self.connector is not None and hasattr(self.connector,
+                                                     "on_finished_recving"):
+                try:
+                    self.connector.on_finished_recving(req_id)  # type: ignore[attr-defined]
+                except Exception:
+                    logger.exception(
+                        "KVConnector on_finished_recving failed for %s", req_id)
         for req_id in (model_runner_output.finished_sending or ()):
             logger.debug("Finished sending KV transfer for request %s", req_id)
             self._free_blocks(self.requests[req_id])
+            if self.connector is not None and hasattr(self.connector,
+                                                     "on_finished_sending"):
+                try:
+                    self.connector.on_finished_sending(req_id)  # type: ignore[attr-defined]
+                except Exception:
+                    logger.exception(
+                        "KVConnector on_finished_sending failed for %s", req_id)
